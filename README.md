@@ -22,6 +22,8 @@ is not, by itself, evidence that a model has learned anything useful. This
 project treats that baseline as a required sanity check rather than an
 afterthought, and reports it alongside every model.
 
+![Model comparison against the naive baseline](figures/part3_model_comparison.png)
+
 ## Results
 
 | | Naive Baseline (Closeₜ₊₁ = Closeₜ) | Part 1 (OHLCV only) | Part 2 (+ Technical Indicators) | Part 3 (Tuned + Ensemble) |
@@ -44,6 +46,8 @@ little new information. Walk-forward (expanding-window) validation confirms
 the Part 3 model's performance is stable across 2023, not an artifact of
 the single train/test split — it's a real, if modest, plateau.
 
+![Part 3 predictions with a 95% residual-based interval](figures/part3_prediction_interval.png)
+
 ## Methodology
 
 **Part 1** — OHLCV lag features (1, 2, 3, 5 days) only.
@@ -64,6 +68,8 @@ Forest, Gradient Boosting, XGBoost, plus a Voting ensemble in Part 3.
 - Walk-forward (expanding-window) validation over the 2023 test period (Part 3)
 - Residual-based 95% prediction interval (empirical coverage: 96.2%)
 - Naive persistence baseline as a sanity check against every trained model
+
+![Residual diagnostics: distribution and Q-Q plot](figures/part3_residual_diagnostics.png)
 
 ## Project Structure
 
