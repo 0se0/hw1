@@ -1,55 +1,89 @@
 # KOSPI Index Prediction
 
-Next-day KOSPI closing price prediction using regression models.
+Predicting the next trading day's KOSPI closing price with regression models,
+built incrementally across three stages — from a bare-bones OHLCV baseline to
+a tuned, ensembled model with proper time-series validation.
+
+## Overview
+
+- **Task**: predict tomorrow's KOSPI closing price from historical price/volume data
+- **Data**: daily KOSPI OHLCV, 2019–2022 for training, 2023 held out for testing
+- **Approach**: three stages of increasing model complexity, each validated
+  with `TimeSeriesSplit` cross-validation to avoid leaking future information
+  into training
+
+## Key Insight
+
+None of the nine trained models beat a trivial baseline that predicts
+"tomorrow's close = today's close" (RMSE 23.86 vs. the best model's 24.23).
+Daily closing price is close to a random walk, so a naive persistence
+forecast already explains ~90% of the variance — a high R² on price *level*
+is not, by itself, evidence that a model has learned anything useful. This
+project treats that baseline as a required sanity check rather than an
+afterthought, and reports it alongside every model.
 
 ## Results
 
-| | Naive Baseline (Closeₜ = Closeₜ₊₁) | Part 1 (OHLCV only) | Part 2 (+ Technical Indicators) | Part 3 (Tuned + Ensemble) |
+| | Naive Baseline (Closeₜ₊₁ = Closeₜ) | Part 1 (OHLCV only) | Part 2 (+ Technical Indicators) | Part 3 (Tuned + Ensemble) |
 |---|---|---|---|---|
 | Best Model | — (persistence) | Ridge Regression | Linear Regression | Lasso Regression (tuned) |
 | R² | 0.9002 | 0.8315 | 0.8971 | 0.8965 |
 | RMSE | 23.86 | 33.41 | 24.23 | 24.30 |
 | MAE | 17.64 | 26.51 | 18.22 | 18.39 |
 
-**R² improved from 0.83 → 0.90 by adding technical indicators (Part 1 → Part 2).**
-But **none of the 9 trained models beat a trivial naive baseline** that just
-predicts "tomorrow's close = today's close" (RMSE 23.86 vs. best model's
-24.23). Next-day closing *price level* is close to a random walk, so a
-persistence baseline already explains most of the variance — a high R² here
-is not by itself evidence of real predictive skill.
+**Part 1 → Part 2**: adding technical indicators lifted R² from 0.83 to
+0.90 — a real, meaningful gain.
 
-Adding more features (EMA/MACD, day-of-week, return lags), hyperparameter
-tuning (`RandomizedSearchCV`), and a `VotingRegressor` ensemble in Part 3
-did **not** beat Part 2's plain Linear Regression either — the top 4 models
-in Part 2/3 all land within R² 0.895–0.897. Most of Part 3's additional
-features are highly correlated with what Part 2 already has (EMA vs. MA,
-MACD derived from EMA, return lags vs. Daily_Return), so they add little
-new information; the real bottleneck is that no model here is beating the
-persistence baseline. Walk-forward (expanding-window) validation on the
-Part 3 model confirms its performance is stable over 2023 (R² 0.897), not
-an artifact of the single train/test split — but stable-and-still-worse-than-naive
-is the more accurate framing.
+**Part 2 → Part 3**: adding more features (EMA/MACD, day-of-week, return
+lags), hyperparameter tuning (`RandomizedSearchCV`), and a `VotingRegressor`
+ensemble did *not* improve on Part 2's plain Linear Regression — the top
+four models across Part 2/3 all land within R² 0.895–0.897. Most of Part
+3's new features are highly correlated with what Part 2 already has (EMA
+vs. MA, MACD derived from EMA, return lags vs. Daily Return), so they add
+little new information. Walk-forward (expanding-window) validation confirms
+the Part 3 model's performance is stable across 2023, not an artifact of
+the single train/test split — it's a real, if modest, plateau.
 
-## Features
+## Methodology
 
-**Part 1** — OHLCV lag features (1, 2, 3, 5 days)
+**Part 1** — OHLCV lag features (1, 2, 3, 5 days) only.
 
-**Part 2** — Part 1 + MA5/20/60, RSI, Bollinger Bands, 
-Momentum, Daily Return, Volatility
+**Part 2** — Part 1 + technical indicators: MA5/20/60, RSI, Bollinger
+Bands, Momentum, Daily Return, Volatility.
 
-**Part 3** — Part 2 + EMA12/26, MACD, day-of-week dummies, return lags (1, 2, 3 days)
+**Part 3** — Part 2 + EMA12/26, MACD, day-of-week dummies, return lags (1,
+2, 3 days), `RandomizedSearchCV` tuning, and a `VotingRegressor` ensemble of
+the top 3 tuned models.
 
-## Models Compared
-Linear Regression, Ridge, Lasso, ElasticNet, 
-Random Forest, Gradient Boosting, XGBoost, and a Voting ensemble of the
-top 3 tuned models (Part 3)
+**Models compared**: Linear Regression, Ridge, Lasso, Elastic Net, Random
+Forest, Gradient Boosting, XGBoost, plus a Voting ensemble in Part 3.
 
-## Validation
-- TimeSeriesSplit cross-validation (prevents data leakage)
+**Validation**:
+- `TimeSeriesSplit` cross-validation for model selection (no data leakage)
 - `RandomizedSearchCV` hyperparameter tuning within each CV fold (Part 3)
 - Walk-forward (expanding-window) validation over the 2023 test period (Part 3)
 - Residual-based 95% prediction interval (empirical coverage: 96.2%)
-- Naive persistence baseline as a sanity check against all trained models (Part 3)
+- Naive persistence baseline as a sanity check against every trained model
+
+## Project Structure
+
+```
+machine_learning_hw1.ipynb   # full pipeline: data loading -> Part 1 -> Part 2 -> Part 3
+README.md
+kospi_train.csv              # not tracked in git, see below
+kospi_test.csv                # not tracked in git, see below
+*.png                         # saved plots (correlation, predictions, residuals, comparisons)
+*.pkl                         # saved models/scalers for each part
+```
+
+## Running It
+
+1. Place `kospi_train.csv` and `kospi_test.csv` (daily `Date, Open, Low,
+   High, Close, Volume`) in the repo root — these aren't committed to git.
+2. Install dependencies: `pandas`, `numpy`, `matplotlib`, `seaborn`,
+   `scikit-learn`, `xgboost`, `scipy`, `joblib`.
+3. Run `machine_learning_hw1.ipynb` top to bottom.
 
 ## Tech
-Python, Scikit-learn, XGBoost, Pandas, NumPy, Matplotlib
+
+Python, scikit-learn, XGBoost, pandas, NumPy, Matplotlib, seaborn
