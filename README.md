@@ -70,19 +70,24 @@ Forest, Gradient Boosting, XGBoost, plus a Voting ensemble in Part 3.
 ```
 machine_learning_hw1.ipynb   # full pipeline: data loading -> Part 1 -> Part 2 -> Part 3
 README.md
-kospi_train.csv              # not tracked in git, see below
-kospi_test.csv                # not tracked in git, see below
-*.png                         # saved plots (correlation, predictions, residuals, comparisons)
-*.pkl                         # saved models/scalers for each part
+data/
+  kospi_train.csv             # not tracked in git, see below
+  kospi_test.csv               # not tracked in git, see below
+models/
+  kospi_part{1,2,3}_model.pkl  # best model per part
+  kospi_part{1,2,3}_scaler.pkl # matching StandardScaler per part
+figures/
+  *.png                        # correlation, predictions, residuals, comparisons
 ```
 
 ## Running It
 
 1. Place `kospi_train.csv` and `kospi_test.csv` (daily `Date, Open, Low,
-   High, Close, Volume`) in the repo root — these aren't committed to git.
+   High, Close, Volume`) under `data/` — these aren't committed to git.
 2. Install dependencies: `pandas`, `numpy`, `matplotlib`, `seaborn`,
    `scikit-learn`, `xgboost`, `scipy`, `joblib`.
-3. Run `machine_learning_hw1.ipynb` top to bottom.
+3. Run `machine_learning_hw1.ipynb` top to bottom. Models/scalers are saved
+   to `models/` and plots to `figures/`.
 
 ## Tech
 
