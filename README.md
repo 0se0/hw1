@@ -1,5 +1,7 @@
 # KOSPI Index Prediction
 
+[![tests](https://github.com/0se0/hw1/actions/workflows/tests.yml/badge.svg?branch=develop)](https://github.com/0se0/hw1/actions/workflows/tests.yml)
+
 Predicting the next trading day's KOSPI closing price with regression models,
 built incrementally across four stages — from a bare OHLCV feature set, to a
 tuned and ensembled model, to finally reframing the problem from predicting the
