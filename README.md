@@ -1,73 +1,92 @@
 # KOSPI Index Prediction
 
 Predicting the next trading day's KOSPI closing price with regression models,
-built incrementally across three stages — from a bare-bones OHLCV baseline to
+built incrementally across three stages — from a bare OHLCV feature set to
 a tuned, ensembled model with proper time-series validation.
 
 ## Overview
 
 - **Task**: predict tomorrow's KOSPI closing price from historical price/volume data
-- **Data**: daily KOSPI OHLCV, 2019–2022 for training, 2023 held out for testing
-- **Approach**: three stages of increasing model complexity, each validated
-  with `TimeSeriesSplit` cross-validation to avoid leaking future information
-  into training
+- **Data**: daily KOSPI OHLCV, 2019–2022 for training (926 usable rows), 2023 held out for testing (243 rows)
+- **Approach**: three stages of increasing model complexity. Models are selected by
+  `TimeSeriesSplit` cross-validation on the training data only; the 2023 test set is
+  used for the final report, never for choosing a model.
+- **Comparable by construction**: every part and the baseline are evaluated on the
+  exact same train/test rows, and rolling indicators are computed over the full
+  history using past values only (no look-ahead).
 
 ## Key Insight
 
-None of the nine trained models beat a trivial baseline that predicts
-"tomorrow's close = today's close" (RMSE 23.86 vs. the best model's 24.23).
-Daily closing price is close to a random walk, so a naive persistence
-forecast already explains ~90% of the variance — a high R² on price *level*
-is not, by itself, evidence that a model has learned anything useful. This
-project treats that baseline as a required sanity check rather than an
-afterthought, and reports it alongside every model.
+None of the models selected by cross-validation beats a trivial baseline that
+predicts "tomorrow's close = today's close" (test RMSE 24.09 vs. 24.35–24.55).
+Daily closing price is close to a random walk, so a persistence forecast already
+explains ~92% of the variance — a high R² on price *level* is not, by itself,
+evidence that a model has learned anything useful. This project reports the
+baseline next to every model as a required sanity check.
+
+Two things the baseline made visible:
+
+- **Information parity matters.** An earlier version of this pipeline left out the
+  current day's OHLCV (predicting `t+1` from `t-1` and earlier), which made the
+  models look much worse than the baseline (R² 0.83) and made technical indicators
+  look like a big win. Once the same information the baseline uses (day `t`) is
+  included, plain linear models land on top of the baseline.
+- **Feature engineering barely moves the needle.** Adding technical indicators
+  (Part 2) changes test R² by about +0.001, and the extra features, tuning, and
+  ensembling in Part 3 do not improve on it.
 
 ![Model comparison against the naive baseline](figures/part3_model_comparison.png)
 
 ## Results
 
-| | Naive Baseline (Closeₜ₊₁ = Closeₜ) | Part 1 (OHLCV only) | Part 2 (+ Technical Indicators) | Part 3 (Tuned + Ensemble) |
+Test set (2023, 243 rows). Each part's model is the one with the lowest
+`TimeSeriesSplit` CV MSE; all three happen to be Lasso.
+
+| | Naive Baseline (Closeₜ₊₁ = Closeₜ) | Part 1 (OHLCV) | Part 2 (+ Technical Indicators) | Part 3 (+ Extra Features, Tuned) |
 |---|---|---|---|---|
-| Best Model | — (persistence) | Ridge Regression | Linear Regression | Lasso Regression (tuned) |
-| R² | 0.9002 | 0.8315 | 0.8971 | 0.8965 |
-| RMSE | 23.86 | 33.41 | 24.23 | 24.30 |
-| MAE | 17.64 | 26.51 | 18.49 | 18.39 |
+| Selected Model | — (persistence) | Lasso | Lasso | Lasso (tuned) |
+| R² | 0.9235 | 0.9209 | 0.9219 | 0.9206 |
+| RMSE | 24.09 | 24.49 | 24.35 | 24.55 |
+| MAE | 18.20 | 18.60 | 18.46 | 18.44 |
 
-**Part 1 → Part 2**: adding technical indicators lifted R² from 0.83 to
-0.90 — a real, meaningful gain.
-
-**Part 2 → Part 3**: adding more features (EMA/MACD, day-of-week, return
-lags), hyperparameter tuning (`RandomizedSearchCV`), and a `VotingRegressor`
-ensemble did *not* improve on Part 2's plain Linear Regression — the top
-four models across Part 2/3 all land within R² 0.895–0.897. Most of Part
-3's new features are highly correlated with what Part 2 already has (EMA
-vs. MA, MACD derived from EMA, return lags vs. Daily Return), so they add
-little new information. Walk-forward (expanding-window) validation confirms
-the Part 3 model's performance is stable across 2023, not an artifact of
-the single train/test split — it's a real, if modest, plateau.
+- All CV-selected models trail the baseline by ~1–2% RMSE.
+- A few *non-selected* linear models edge past it on the test set (Part 2 Ridge
+  RMSE 23.94, Part 2 Linear 24.05), but by well under 1% — noise-level differences,
+  and picking them would mean selecting on the test set.
+- Part 3's `VotingRegressor` ensemble (R² 0.9209) does not beat its best member.
+  Most of Part 3's new features are nearly redundant with Part 2's (e.g. EMA12 vs.
+  MA5 correlation 0.998, EMA26 vs. MA20 0.999; MACD is derived from the EMAs).
+- Walk-forward (expanding-window) validation of the Part 3 model gives R² 0.9217 /
+  RMSE 24.37 — consistent with the single split, and still a hair behind the baseline.
+- Tree models (Random Forest, Gradient Boosting, XGBoost) do notably worse than
+  linear models here (likely because they cannot extrapolate beyond the price range
+  seen in training; not tested separately).
 
 ![Part 3 predictions with a 95% residual-based interval](figures/part3_prediction_interval.png)
 
 ## Methodology
 
-**Part 1** — OHLCV lag features (1, 2, 3, 5 days) only.
+**Part 1** — OHLCV for the current day and lags of 1, 2, 3, 5 days.
 
-**Part 2** — Part 1 + technical indicators: MA5/20/60, RSI, Bollinger
-Bands, Momentum, Daily Return, Volatility.
+**Part 2** — Part 1 + technical indicators: MA5/20/60, RSI, Bollinger Bands,
+Momentum, Daily Return, Volatility, consecutive up/down-day counts.
 
-**Part 3** — Part 2 + EMA12/26, MACD, day-of-week dummies, return lags (1,
-2, 3 days), `RandomizedSearchCV` tuning, and a `VotingRegressor` ensemble of
-the top 3 tuned models.
+**Part 3** — Part 2 + EMA12/26, MACD and signal line, day-of-week dummies, return
+lags (1, 2, 3 days), `RandomizedSearchCV` tuning, and a `VotingRegressor` ensemble
+of the top 3 tuned models.
 
-**Models compared**: Linear Regression, Ridge, Lasso, Elastic Net, Random
-Forest, Gradient Boosting, XGBoost, plus a Voting ensemble in Part 3.
+**Models compared**: Linear Regression, Ridge, Lasso, Elastic Net, Random Forest,
+Gradient Boosting, XGBoost, plus a Voting ensemble in Part 3.
 
 **Validation**:
-- `TimeSeriesSplit` cross-validation for model selection (no data leakage)
-- `RandomizedSearchCV` hyperparameter tuning within each CV fold (Part 3)
+- Model selection by `TimeSeriesSplit` cross-validation MSE (training data only)
+- `RandomizedSearchCV` hyperparameter tuning with `TimeSeriesSplit` as the CV scheme (Part 3)
+- Identical train/test rows for every part and the baseline
+- Naive persistence baseline as a sanity check against every model
 - Walk-forward (expanding-window) validation over the 2023 test period (Part 3)
-- Residual-based 95% prediction interval (empirical coverage: 96.2%)
-- Naive persistence baseline as a sanity check against every trained model
+- Approximate 95% prediction interval sized from out-of-sample CV residuals on the
+  training data (half-width ±73.7). It covers 99.6% of the test points, i.e. it is
+  conservative: early CV folds train on little data and inflate the residual spread.
 
 ![Residual diagnostics: distribution and Q-Q plot](figures/part3_residual_diagnostics.png)
 
@@ -80,7 +99,7 @@ data/
   kospi_train.csv             # not tracked in git, see below
   kospi_test.csv               # not tracked in git, see below
 models/
-  kospi_part{1,2,3}_model.pkl  # best model per part
+  kospi_part{1,2,3}_model.pkl  # CV-selected model per part
   kospi_part{1,2,3}_scaler.pkl # matching StandardScaler per part
 figures/
   *.png                        # correlation, predictions, residuals, comparisons
