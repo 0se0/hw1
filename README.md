@@ -5,6 +5,16 @@ built incrementally across four stages — from a bare OHLCV feature set, to a
 tuned and ensembled model, to finally reframing the problem from predicting the
 price level to predicting the next-day return.
 
+## TL;DR
+
+- Built a leakage-free, comparable evaluation setup for next-day KOSPI prediction:
+  model selection by time-series CV only, identical train/test rows for every
+  stage, and naive baselines next to every model.
+- Under that setup, a price-level R² of ~0.92 is what "tomorrow = today" already
+  achieves; tuning, ensembling, and extra indicators do not improve on it.
+- Reframed as return prediction, no model beat a zero forecast or an "always up"
+  guess on direction — with these features and 243 test days, no signal was detectable.
+
 ## Overview
 
 - **Task**: predict tomorrow's KOSPI closing price from historical price/volume data
@@ -38,7 +48,8 @@ Two things the baseline made visible:
 - **The honest test is return prediction.** Predicting the next-day *return*
   (Part 4) removes the random-walk shortcut. There, no model beats a zero or
   mean forecast, and none predicts direction better than always guessing "up".
-  With price/volume-derived daily features, there is no detectable signal.
+  With price/volume-derived daily features and this test size, no signal is
+  detectable.
 
 ![Model comparison against the naive baseline](figures/part3_model_comparison.png)
 
@@ -133,6 +144,17 @@ tuned models above).
   conservative: early CV folds train on little data and inflate the residual spread.
 
 ![Residual diagnostics: distribution and Q-Q plot](figures/part3_residual_diagnostics.png)
+
+## Next Steps
+
+- **Information the model doesn't have**: USD/KRW, overnight US index returns,
+  interest rates, and foreign-investor flows — daily KOSPI price/volume alone
+  appears to be exhausted.
+- **More test data**: a multi-year walk-forward evaluation, since 243 days cannot
+  detect an edge of a few percentage points in direction accuracy.
+- **Reframe the target**: up/down classification with calibrated probabilities and a
+  cost-aware backtest, or volatility forecasting, which is generally more
+  predictable than returns.
 
 ## Project Structure
 
