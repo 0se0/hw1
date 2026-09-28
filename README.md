@@ -31,7 +31,7 @@ afterthought, and reports it alongside every model.
 | Best Model | — (persistence) | Ridge Regression | Linear Regression | Lasso Regression (tuned) |
 | R² | 0.9002 | 0.8315 | 0.8971 | 0.8965 |
 | RMSE | 23.86 | 33.41 | 24.23 | 24.30 |
-| MAE | 17.64 | 26.51 | 18.22 | 18.39 |
+| MAE | 17.64 | 26.51 | 18.49 | 18.39 |
 
 **Part 1 → Part 2**: adding technical indicators lifted R² from 0.83 to
 0.90 — a real, meaningful gain.
