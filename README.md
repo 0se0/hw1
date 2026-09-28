@@ -1,14 +1,15 @@
 # KOSPI Index Prediction
 
 Predicting the next trading day's KOSPI closing price with regression models,
-built incrementally across three stages — from a bare OHLCV feature set to
-a tuned, ensembled model with proper time-series validation.
+built incrementally across four stages — from a bare OHLCV feature set, to a
+tuned and ensembled model, to finally reframing the problem from predicting the
+price level to predicting the next-day return.
 
 ## Overview
 
 - **Task**: predict tomorrow's KOSPI closing price from historical price/volume data
 - **Data**: daily KOSPI OHLCV, 2019–2022 for training (926 usable rows), 2023 held out for testing (243 rows)
-- **Approach**: three stages of increasing model complexity. Models are selected by
+- **Approach**: four stages of increasing rigor. Models are selected by
   `TimeSeriesSplit` cross-validation on the training data only; the 2023 test set is
   used for the final report, never for choosing a model.
 - **Comparable by construction**: every part and the baseline are evaluated on the
@@ -34,6 +35,10 @@ Two things the baseline made visible:
 - **Feature engineering barely moves the needle.** Adding technical indicators
   (Part 2) changes test R² by about +0.001, and the extra features, tuning, and
   ensembling in Part 3 do not improve on it.
+- **The honest test is return prediction.** Predicting the next-day *return*
+  (Part 4) removes the random-walk shortcut. There, no model beats a zero or
+  mean forecast, and none predicts direction better than always guessing "up".
+  With price/volume-derived daily features, there is no detectable signal.
 
 ![Model comparison against the naive baseline](figures/part3_model_comparison.png)
 
@@ -64,6 +69,38 @@ Test set (2023, 243 rows). Each part's model is the one with the lowest
 
 ![Part 3 predictions with a 95% residual-based interval](figures/part3_prediction_interval.png)
 
+### Part 4 — next-day return
+
+Same train/test rows, stationary features only (returns and lags, gaps to moving
+averages, volatility, volume ratio, RSI, MACD/close, Bollinger %B, day-of-week).
+Out-of-sample R² is measured against a zero forecast (positive = better than
+predicting no change).
+
+| | CV MSE (1e-4) | Test RMSE (%) | OOS R² vs zero | Direction acc. | Spearman IC |
+|---|---|---|---|---|---|
+| Zero forecast (= price baseline) | 1.829 | 0.979 | 0.000 | — | — |
+| Train-mean forecast | 1.835 | 0.979 | +0.002 | — | — |
+| Always "up" | — | — | — | 0.547 | — |
+| Ridge (CV-selected) | 1.821 | 0.994 | −0.031 | 0.510 | +0.019 |
+| Lasso | 1.832 | 0.983 | −0.008 | 0.498 | +0.009 |
+| Random Forest | 1.838 | 0.991 | −0.024 | 0.523 | −0.033 |
+| Gradient Boosting | 1.837 | 0.979 | +0.000 | 0.547 | — |
+| XGBoost | 1.831 | 0.983 | −0.008 | 0.523 | −0.037 |
+
+- The CV-selected Ridge beats the zero forecast in CV by only 0.4% and then does
+  worse on the test set (OOS R² −0.031); converted back to price, its RMSE is
+  24.47 vs. 24.09 for the naive baseline.
+- Elastic Net and Gradient Boosting shrink to a constant forecast (they find no
+  signal), so their direction accuracy simply equals "always up".
+- No model's direction accuracy beats "always up" (one-sided binomial test,
+  p ≥ 0.5 for all; the best information coefficient is +0.019).
+- With 243 test points the standard error on direction accuracy is about 3
+  percentage points, so a small real edge could not be detected — but nothing here
+  suggests one. This is consistent with next-day returns being close to
+  unpredictable from past prices and volume alone.
+
+![Part 4: predicted vs. actual next-day return and direction accuracy](figures/part4_return_prediction.png)
+
 ## Methodology
 
 **Part 1** — OHLCV for the current day and lags of 1, 2, 3, 5 days.
@@ -75,14 +112,21 @@ Momentum, Daily Return, Volatility, consecutive up/down-day counts.
 lags (1, 2, 3 days), `RandomizedSearchCV` tuning, and a `VotingRegressor` ensemble
 of the top 3 tuned models.
 
+**Part 4** — Target changes to the next-day return `Close(t+1)/Close(t) − 1`.
+21 stationary features, `RandomizedSearchCV` per model with ranges rescaled to
+return magnitudes, compared against zero, mean, and always-up baselines.
+
 **Models compared**: Linear Regression, Ridge, Lasso, Elastic Net, Random Forest,
-Gradient Boosting, XGBoost, plus a Voting ensemble in Part 3.
+Gradient Boosting, XGBoost, plus a Voting ensemble in Part 3 (Part 4: the six
+tuned models above).
 
 **Validation**:
 - Model selection by `TimeSeriesSplit` cross-validation MSE (training data only)
 - `RandomizedSearchCV` hyperparameter tuning with `TimeSeriesSplit` as the CV scheme (Part 3)
 - Identical train/test rows for every part and the baseline
 - Naive persistence baseline as a sanity check against every model
+- Part 4: out-of-sample R² against a zero forecast, direction accuracy against an
+  always-up baseline with a one-sided binomial test, and rank correlation (IC)
 - Walk-forward (expanding-window) validation over the 2023 test period (Part 3)
 - Approximate 95% prediction interval sized from out-of-sample CV residuals on the
   training data (half-width ±73.7). It covers 99.6% of the test points, i.e. it is
@@ -93,14 +137,14 @@ Gradient Boosting, XGBoost, plus a Voting ensemble in Part 3.
 ## Project Structure
 
 ```
-machine_learning_hw1.ipynb   # full pipeline: data loading -> Part 1 -> Part 2 -> Part 3
+machine_learning_hw1.ipynb   # full pipeline: data loading -> Part 1 -> 2 -> 3 -> 4
 README.md
 data/
   kospi_train.csv             # not tracked in git, see below
   kospi_test.csv               # not tracked in git, see below
 models/
-  kospi_part{1,2,3}_model.pkl  # CV-selected model per part
-  kospi_part{1,2,3}_scaler.pkl # matching StandardScaler per part
+  kospi_part{1,2,3,4}_model.pkl  # CV-selected model per part
+  kospi_part{1,2,3,4}_scaler.pkl # matching StandardScaler per part
 figures/
   *.png                        # correlation, predictions, residuals, comparisons
 ```
