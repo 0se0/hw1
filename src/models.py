@@ -27,10 +27,10 @@ def train_and_evaluate_models(X_train, y_train, X_test, y_test):
     best_cv = float('inf')
 
     for name, model in get_base_models().items():
-        print(f"\n{name} 모델 훈련 중...")
+        print(f"\nTraining {name}...")
 
         cv_score = time_series_cv(model, X_train, y_train)
-        print(f"교차 검증 MSE: {cv_score:.2f}")
+        print(f"CV MSE: {cv_score:.2f}")
 
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
@@ -75,7 +75,7 @@ def tune_models(search_space, X_train, y_train, n_iter=20, n_splits=5, verbose=T
     estimators, cv_mse = {}, {}
     for name, (estimator, distributions) in search_space.items():
         if verbose:
-            print(f"\n{name} 튜닝 중...")
+            print(f"\nTuning {name}...")
         search = RandomizedSearchCV(
             estimator, distributions, n_iter=n_iter, cv=TimeSeriesSplit(n_splits=n_splits),
             scoring='neg_mean_squared_error', random_state=42, n_jobs=-1
@@ -84,8 +84,8 @@ def tune_models(search_space, X_train, y_train, n_iter=20, n_splits=5, verbose=T
         estimators[name] = search.best_estimator_
         cv_mse[name] = -search.best_score_
         if verbose:
-            print(f"최적 파라미터: {search.best_params_}")
-            print(f"교차 검증 MSE: {-search.best_score_:.2f}")
+            print(f"Best parameters: {search.best_params_}")
+            print(f"CV MSE: {-search.best_score_:.2f}")
     return estimators, cv_mse
 
 

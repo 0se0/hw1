@@ -19,7 +19,7 @@ def evaluate_model(y_true, y_pred, model_name):
     mae = mean_absolute_error(y_true, y_pred)
     r2 = r2_score(y_true, y_pred)
 
-    print(f"{model_name} 성능:")
+    print(f"{model_name} performance:")
     print(f"MSE: {mse:.2f}")
     print(f"RMSE: {rmse:.2f}")
     print(f"MAE: {mae:.2f}")

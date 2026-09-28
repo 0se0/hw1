@@ -17,7 +17,7 @@ from .features import prepare_features
 from .models import PART3_SEARCH_SPACE, PART4_SEARCH_SPACE, train_and_evaluate_models, tune_models
 
 
-def train(part, data_dir='data', out_dir='models'):
+def train(part, data_dir='data', out_dir='models', n_iter=20):
     data_dir, out_dir = Path(data_dir), Path(out_dir)
     df_train = read_data(data_dir / 'kospi_train.csv')
     df_test = read_data(data_dir / 'kospi_test.csv')
@@ -30,7 +30,7 @@ def train(part, data_dir='data', out_dir='models'):
         _, (name, model) = train_and_evaluate_models(X_tr_s, y_tr, X_te_s, y_te)
     else:
         space = PART3_SEARCH_SPACE if part == 3 else PART4_SEARCH_SPACE
-        estimators, cv_mse = tune_models(space, X_tr_s, y_tr)
+        estimators, cv_mse = tune_models(space, X_tr_s, y_tr, n_iter=n_iter)
         name = min(cv_mse, key=cv_mse.get)
         model = estimators[name]
         y_pred = model.predict(X_te_s)
@@ -53,8 +53,9 @@ def main():
     parser.add_argument('--part', type=int, choices=[1, 2, 3, 4], required=True)
     parser.add_argument('--data-dir', default='data')
     parser.add_argument('--out-dir', default='models')
+    parser.add_argument('--n-iter', type=int, default=20, help='random-search iterations per model (parts 3-4)')
     args = parser.parse_args()
-    train(args.part, args.data_dir, args.out_dir)
+    train(args.part, args.data_dir, args.out_dir, args.n_iter)
 
 
 if __name__ == '__main__':

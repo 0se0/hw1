@@ -23,3 +23,10 @@ def train_df():
 @pytest.fixture
 def test_df(train_df):
     return _make_frame(150, train_df['Date'].iloc[-1] + pd.offsets.BDay(1), seed=1)
+
+
+def write_csvs(directory, train_df, test_df):
+    directory.mkdir(parents=True, exist_ok=True)
+    train_df.to_csv(directory / 'kospi_train.csv', index=False)
+    test_df.to_csv(directory / 'kospi_test.csv', index=False)
+    return directory
