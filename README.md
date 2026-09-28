@@ -25,7 +25,9 @@ price level to predicting the next-day return.
   Gradient Boosting, XGBoost), `RandomizedSearchCV` tuning, `VotingRegressor` ensembling
 - **Evaluation rigor**: naive/zero/always-up baselines, out-of-sample R², rank IC,
   binomial significance test, prediction intervals
-- **Tooling**: Python, scikit-learn, XGBoost, pandas, NumPy, SciPy, Matplotlib, seaborn
+- **ML engineering**: modular `src/` package, unit tests that guard against look-ahead
+  and train/test leakage, CLI for retraining and inference, GitHub Actions CI
+- **Tooling**: Python, scikit-learn, XGBoost, pandas, NumPy, SciPy, Matplotlib, seaborn, pytest
 
 ## Overview
 
@@ -171,8 +173,18 @@ tuned models above).
 ## Project Structure
 
 ```
-machine_learning_hw1.ipynb   # full pipeline: data loading -> Part 1 -> 2 -> 3 -> 4
+machine_learning_hw1.ipynb   # narrative + results: Part 1 -> 2 -> 3 -> 4 (logic imported from src/)
+src/
+  data.py                    # CSV loading
+  features.py                # feature construction, shared train/test split (no look-ahead)
+  evaluation.py              # scaling, CV, walk-forward, return metrics, prediction intervals
+  models.py                  # model sets, search spaces, CV-based selection
+  train.py                   # CLI: retrain a part and save the CV-selected model
+  predict.py                 # CLI: next-day prediction from a price history CSV
+tests/                       # leakage / alignment / inference-consistency tests (synthetic data)
+.github/workflows/tests.yml  # CI: runs the tests on every push
 README.md
+requirements.txt
 data/
   kospi_train.csv             # not tracked in git, see below
   kospi_test.csv               # not tracked in git, see below
@@ -193,6 +205,18 @@ figures/
 3. Run `machine_learning_hw1.ipynb` top to bottom (or headless:
    `jupyter nbconvert --to notebook --execute --inplace machine_learning_hw1.ipynb`).
    Models/scalers are saved to `models/` and plots to `figures/`.
+
+Outside the notebook:
+
+```bash
+python -m pytest -q                                    # run the tests (no data needed)
+python -m src.train --part 2                           # retrain a part (1-4), saves to models/
+python -m src.predict --part 2 --history data/kospi_test.csv   # predict from the latest row
+```
+
+`src.train` reproduces the notebook's saved models exactly (same CV selection and seeds).
+`src.predict` needs about 60 trading days of history so the rolling indicators are defined;
+parts 1–3 output the next close, part 4 the next-day return.
 
 ## Tech
 

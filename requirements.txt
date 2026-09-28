@@ -8,3 +8,4 @@ scipy>=1.16
 joblib>=1.5
 jupyter>=1.0
 nbconvert>=7.0
+pytest>=8

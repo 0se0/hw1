@@ -1,3 +1,6 @@
 data/kospi_train.csv
 data/kospi_test.csv
 .omc/
+__pycache__/
+.pytest_cache/
+.ipynb_checkpoints/
