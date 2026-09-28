@@ -15,6 +15,18 @@ price level to predicting the next-day return.
 - Reframed as return prediction, no model beat a zero forecast or an "always up"
   guess on direction — with these features and 243 test days, no signal was detectable.
 
+## Skills Demonstrated
+
+- **Time-series ML validation**: `TimeSeriesSplit` CV, walk-forward (expanding-window)
+  evaluation, leakage detection and removal
+- **Feature engineering**: lag features, technical indicators (MA/EMA, RSI, MACD,
+  Bollinger), stationary return features
+- **Modeling**: linear (Ridge/Lasso/Elastic Net) and tree-based models (Random Forest,
+  Gradient Boosting, XGBoost), `RandomizedSearchCV` tuning, `VotingRegressor` ensembling
+- **Evaluation rigor**: naive/zero/always-up baselines, out-of-sample R², rank IC,
+  binomial significance test, prediction intervals
+- **Tooling**: Python, scikit-learn, XGBoost, pandas, NumPy, SciPy, Matplotlib, seaborn
+
 ## Overview
 
 - **Task**: predict tomorrow's KOSPI closing price from historical price/volume data
@@ -173,12 +185,14 @@ figures/
 
 ## Running It
 
-1. Place `kospi_train.csv` and `kospi_test.csv` (daily `Date, Open, Low,
-   High, Close, Volume`) under `data/` — these aren't committed to git.
-2. Install dependencies: `pandas`, `numpy`, `matplotlib`, `seaborn`,
-   `scikit-learn`, `xgboost`, `scipy`, `joblib`.
-3. Run `machine_learning_hw1.ipynb` top to bottom. Models/scalers are saved
-   to `models/` and plots to `figures/`.
+1. Place `kospi_train.csv` (2019–2022) and `kospi_test.csv` (2023) under `data/`.
+   These are daily KOSPI index files with columns `Date, Open, Low, High, Close,
+   Volume`, provided as coursework data; they are not redistributed in this repo.
+2. Install dependencies: `pip install -r requirements.txt`
+   (developed and tested with Python 3.13, pandas 2.3, scikit-learn 1.7, xgboost 3.3).
+3. Run `machine_learning_hw1.ipynb` top to bottom (or headless:
+   `jupyter nbconvert --to notebook --execute --inplace machine_learning_hw1.ipynb`).
+   Models/scalers are saved to `models/` and plots to `figures/`.
 
 ## Tech
 
