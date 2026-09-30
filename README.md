@@ -175,7 +175,8 @@ tuned models above).
 ## Project Structure
 
 ```
-machine_learning_hw1.ipynb   # narrative + results: Part 1 -> 2 -> 3 -> 4 (logic imported from src/)
+notebooks/
+  machine_learning_hw1.ipynb # narrative + results: Part 1 -> 2 -> 3 -> 4 (logic imported from src/)
 src/
   data.py                    # CSV loading
   features.py                # feature construction, shared train/test split (no look-ahead)
@@ -204,9 +205,11 @@ figures/
    Volume`, provided as coursework data; they are not redistributed in this repo.
 2. Install dependencies: `pip install -r requirements.txt`
    (developed and tested with Python 3.13, pandas 2.3, scikit-learn 1.7, xgboost 3.3).
-3. Run `machine_learning_hw1.ipynb` top to bottom (or headless:
-   `jupyter nbconvert --to notebook --execute --inplace machine_learning_hw1.ipynb`).
-   Models/scalers are saved to `models/` and plots to `figures/`.
+3. Run `notebooks/machine_learning_hw1.ipynb` top to bottom (or headless:
+   `jupyter nbconvert --to notebook --execute --inplace notebooks/machine_learning_hw1.ipynb`).
+   Its first cell switches the working directory to the repo root, so it runs the
+   same way whether opened from `notebooks/` or elsewhere. Models/scalers are saved
+   to `models/` and plots to `figures/`.
 
 Outside the notebook:
 
